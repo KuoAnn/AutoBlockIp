@@ -12,6 +12,31 @@ This Batch Will Auto block suspicious IP from windows event log.
 2. Configure the firewall through the power shell
 3. Log windows event
 
+### Event log datas - 4625
+``` xml
+  <Data Name="SubjectUserSid">S-1-0-0</Data> 
+  <Data Name="SubjectUserName">-</Data> 
+  <Data Name="SubjectDomainName">-</Data> 
+  <Data Name="SubjectLogonId">0x0</Data> 
+  <Data Name="TargetUserSid">S-1-0-0</Data> 
+  <Data Name="TargetUserName">ѓ®бвм</Data> 
+  <Data Name="TargetDomainName" /> 
+  <Data Name="Status">0xc000006d</Data> 
+  <Data Name="FailureReason">%%2313</Data> 
+  <Data Name="SubStatus">0xc0000064</Data> 
+  <Data Name="LogonType">3</Data> 
+  <Data Name="LogonProcessName">NtLmSsp</Data> 
+  <Data Name="AuthenticationPackageName">NTLM</Data> 
+  <Data Name="WorkstationName">-</Data> 
+  <Data Name="TransmittedServices">-</Data> 
+  <Data Name="LmPackageName">-</Data> 
+  <Data Name="KeyLength">0</Data> 
+  <Data Name="ProcessId">0x0</Data> 
+  <Data Name="ProcessName">-</Data> 
+  <Data Name="IpAddress">83.69.141.105</Data> 
+  <Data Name="IpPort">5223</Data> 
+```
+
 ## Powershell script
 ``` sh
 # 將特定 IP 加入到防火牆的規則內
