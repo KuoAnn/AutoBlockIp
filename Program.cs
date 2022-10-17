@@ -25,6 +25,7 @@ namespace AutoBlockIP
 
                 if (newBlockIps.Count() > 0)
                 {
+                    logger.AppendLine($"NewBlockIps=\n{string.Join("\n", newBlockIps)}");
                     if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
                     {
                         logger.AppendLine("SetBlockedIpsIntoFirewall...OK");
@@ -36,7 +37,7 @@ namespace AutoBlockIP
                 }
                 else
                 {
-                    logger.AppendLine($"There's no change IP...{suspiciousIps.Count()/ blockedIps.Count()}");
+                    logger.AppendLine($"There's no change IP...{suspiciousIps.Count() / blockedIps.Count()}");
                 }
             }
             catch (Exception ex)
