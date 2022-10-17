@@ -36,7 +36,7 @@ namespace AutoBlockIP
                 }
                 else
                 {
-                    logger.AppendLine($"There's no change IP...{mergedIps.Count()}");
+                    logger.AppendLine($"There's no change IP...{suspiciousIps.Count()/ blockedIps.Count()}");
                 }
             }
             catch (Exception ex)
