@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace AutoBlockIP
 {
@@ -10,7 +11,7 @@ namespace AutoBlockIP
         private static readonly int threshold = 3;
         private static readonly string[] whiteList = new string[] { "kuoann" };
         private static readonly string firewallRuleName = "AutoBlockIP";
-        private static StringBuilder logger = new StringBuilder();
+        private static StringBuilder logMessage = new StringBuilder();
 
         private static void Main(string[] args)
         {
@@ -25,34 +26,40 @@ namespace AutoBlockIP
 
                 if (newBlockIps.Count() > 0)
                 {
-                    logger.AppendLine($"NewBlockIps=\n{string.Join("\n", newBlockIps)}");
+                    Log($"NewBlockIps=\n{string.Join("\n", newBlockIps)}");
                     if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
                     {
-                        logger.AppendLine("SetBlockedIpsIntoFirewall...OK");
+                        Log("SetBlockedIpsIntoFirewall...OK");
                     }
                     else
                     {
-                        logger.AppendLine("SetBlockedIpsIntoFirewall...Fail");
+                        Log("SetBlockedIpsIntoFirewall...Fail");
                     }
                 }
                 else
                 {
-                    logger.AppendLine($"There's no change IP...{suspiciousIps.Count() / blockedIps.Count()}");
+                    Log($"\nNo Updated IP...{suspiciousIps.Count() / blockedIps.Count()}");
                 }
             }
             catch (Exception ex)
             {
+                Log("Error >>> " + ex.ToString());
                 Write2EventLog(ex.ToString(), EventLogEntryType.Error);
             }
             finally
             {
 #if DEBUG
-                Console.WriteLine(logger.ToString());
                 Console.ReadKey();
 #else
-                Write2EventLog(logger.ToString(), EventLogEntryType.Warning);
+                Write2EventLog(logMessage.ToString(), EventLogEntryType.Warning);
 #endif
             }
+        }
+
+        private static void Log(string msg)
+        {
+            logMessage.AppendLine(msg);
+            Console.WriteLine(msg);
         }
 
         private static void Write2EventLog(string message, EventLogEntryType entryType = EventLogEntryType.Information)
@@ -70,7 +77,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetSuspiciousIps()
         {
-            logger.AppendLine("Get Suspicious Ip >>>\n");
+            Log("Get Suspicious Ip >>>\n");
             var suspiciousIps = new List<string>();
             var eventLog = new EventLog() { Log = "Security" };
             var entries =
@@ -111,11 +118,11 @@ namespace AutoBlockIP
 
                 suspiciousIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
 
-                logger.AppendLine($"{string.Join(",", suspiciousIps)}");
+                Log($"{string.Join(",", suspiciousIps)}");
             }
             else
             {
-                logger.AppendLine($"No datas in event log \"{eventLog.LogDisplayName}\"");
+                Log($"No datas in event log \"{eventLog.LogDisplayName}\"");
             }
 
             return suspiciousIps;
@@ -149,7 +156,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetBlockedIps()
         {
-            logger.AppendLine("Get Blocked Ip >>>\n");
+            Log("Get Blocked Ip >>>\n");
             var blockedIps = new List<string>();
 
             using (var ps = PowerShell.Create())
@@ -160,7 +167,7 @@ namespace AutoBlockIP
 
                 foreach (string ip in ps.Invoke<string>())
                 {
-                    logger.AppendLine(ip);
+                    Log(ip);
                     blockedIps.Add(ip);
                 }
 
@@ -183,7 +190,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static bool SetBlockedIpsIntoFirewall(string[] ips)
         {
-            logger.AppendLine($"Set {ips.Length} Blocked IP into Firewall >>>\n");
+            Log($"Set {ips.Length} Blocked IP into Firewall >>>\n");
             using (var ps = PowerShell.Create())
             {
                 var sb = new StringBuilder();
@@ -209,7 +216,7 @@ namespace AutoBlockIP
                 }
                 else
                 {
-                    logger.AppendLine($"{string.Join("\n", ips)}");
+                    Program.Log($"{string.Join("\n", ips)}");
                 }
             }
             return true;
