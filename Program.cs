@@ -70,7 +70,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetSuspiciousIps()
         {
-            logger.AppendLine("GetSuspiciousIps...");
+            logger.AppendLine("Get Suspicious Ip >>>\n");
             var suspiciousIps = new List<string>();
             var eventLog = new EventLog() { Log = "Security" };
             var entries =
@@ -111,12 +111,7 @@ namespace AutoBlockIP
 
                 suspiciousIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
 
-                foreach (string result in suspiciousIps)
-                {
-                    logger.AppendLine(result);
-                }
-
-                logger.AppendLine($"GetSuspiciousIps:\n{string.Join("\n", suspiciousIps)}");
+                logger.AppendLine($"{string.Join(",", suspiciousIps)}");
             }
             else
             {
@@ -154,7 +149,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetBlockedIps()
         {
-            logger.AppendLine("GetBlockedIps...");
+            logger.AppendLine("Get Blocked Ip >>>\n");
             var blockedIps = new List<string>();
 
             using (var ps = PowerShell.Create())
@@ -188,7 +183,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static bool SetBlockedIpsIntoFirewall(string[] ips)
         {
-            logger.AppendLine($"SetBlockedIpsIntoFirewall...{ips.Length}");
+            logger.AppendLine($"Set {ips.Length} Blocked IP into Firewall >>>\n");
             using (var ps = PowerShell.Create())
             {
                 var sb = new StringBuilder();
@@ -214,7 +209,7 @@ namespace AutoBlockIP
                 }
                 else
                 {
-                    logger.AppendLine($"SetBlockedIpsIntoFirewall\n{string.Join("\n", ips)}");
+                    logger.AppendLine($"{string.Join("\n", ips)}");
                 }
             }
             return true;
