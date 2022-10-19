@@ -18,28 +18,37 @@ namespace AutoBlockIP
             try
             {
                 var suspiciousIps = GetSuspiciousIps();
-                var blockedIps = GetBlockedIps();
-                var mergedIps = blockedIps.Union(suspiciousIps);
 
-                var newBlockIps = mergedIps.Except(blockedIps);
-                mergedIps = mergedIps.OrderBy(x => x).ToList();
-
-                if (newBlockIps.Count() > 0)
+                if (suspiciousIps.Count() > 0)
                 {
-                    Log($"NewBlockIps = {string.Join("\n", newBlockIps)}");
-                    if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
+                    var blockedIps = GetBlockedIps();
+                    var mergedIps = blockedIps.Union(suspiciousIps);
+
+                    var newBlockIps = mergedIps.Except(blockedIps);
+                    mergedIps = mergedIps.OrderBy(x => x).ToList();
+
+                    if (newBlockIps.Count() > 0)
                     {
-                        Log("SetBlockedIpsIntoFirewall...OK");
+                        Log($"NewBlockIps = {string.Join("\n", newBlockIps)}");
+                        if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
+                        {
+                            Log("SetBlockedIpsIntoFirewall...OK");
+                        }
+                        else
+                        {
+                            Log("SetBlockedIpsIntoFirewall...Fail");
+                        }
                     }
                     else
                     {
-                        Log("SetBlockedIpsIntoFirewall...Fail");
+                        Log($"\nNo Updated IP...{suspiciousIps.Count() / blockedIps.Count()}");
                     }
                 }
                 else
                 {
-                    Log($"\nNo Updated IP...{suspiciousIps.Count() / blockedIps.Count()}");
+                    Log($"\nNo Suspicious IP");
                 }
+
             }
             catch (Exception ex)
             {
