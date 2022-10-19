@@ -26,7 +26,7 @@ namespace AutoBlockIP
 
                 if (newBlockIps.Count() > 0)
                 {
-                    Log($"NewBlockIps=\n{string.Join("\n", newBlockIps)}");
+                    Log($"NewBlockIps = {string.Join("\n", newBlockIps)}");
                     if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
                     {
                         Log("SetBlockedIpsIntoFirewall...OK");
@@ -43,7 +43,7 @@ namespace AutoBlockIP
             }
             catch (Exception ex)
             {
-                Log("Error >>> " + ex.ToString());
+                Log("\nError >>> " + ex.ToString());
                 Write2EventLog(ex.ToString(), EventLogEntryType.Error);
             }
             finally
@@ -77,7 +77,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetSuspiciousIps()
         {
-            Log("Get Suspicious Ip >>>\n");
+            Log("\nGet Suspicious Ip >>>");
             var suspiciousIps = new List<string>();
             var eventLog = new EventLog() { Log = "Security" };
             var entries =
@@ -156,7 +156,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static List<string> GetBlockedIps()
         {
-            Log("Get Blocked Ip >>>\n");
+            Log("\nGet Blocked Ip >>>");
             var blockedIps = new List<string>();
 
             using (var ps = PowerShell.Create())
@@ -190,7 +190,7 @@ namespace AutoBlockIP
         /// <returns></returns>
         private static bool SetBlockedIpsIntoFirewall(string[] ips)
         {
-            Log($"Set {ips.Length} Blocked IP into Firewall >>>\n");
+            Log($"\nSet {ips.Length} Blocked IP into Firewall >>>");
             using (var ps = PowerShell.Create())
             {
                 var sb = new StringBuilder();
