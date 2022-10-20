@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
 using System.Text;
-using Microsoft.Extensions.Logging;
 
 namespace AutoBlockIP
 {
@@ -10,6 +9,7 @@ namespace AutoBlockIP
     {
         private static readonly int threshold = 3;
         private static readonly string[] whiteList = new string[] { "kuoann" };
+        private static readonly string[] blackList = new string[] { "administrator", "guest" };
         private static readonly string firewallRuleName = "AutoBlockIP";
         private static StringBuilder logMessage = new StringBuilder();
 
@@ -111,7 +111,8 @@ namespace AutoBlockIP
                         var targetUserName = d.ReplacementStrings[5];
                         var ip = d.ReplacementStrings[19];
 
-                        if (ValidateIPv4(ip) && !IsWhiteList(targetUserName))
+                        if (ValidateIPv4(ip) &&
+                            (!IsWhiteList(targetUserName) || IsBlackList(targetUserName)))
                         {
                             if (ips.ContainsKey(ip))
                             {
@@ -158,6 +159,10 @@ namespace AutoBlockIP
         private static bool IsWhiteList(string targetUserName) =>
             !string.IsNullOrWhiteSpace(targetUserName)
             && whiteList.Contains(targetUserName.Trim().ToLower());
+
+        private static bool IsBlackList(string targetUserName) =>
+            !string.IsNullOrWhiteSpace(targetUserName)
+            && blackList.Contains(targetUserName.Trim().ToLower());
 
         /// <summary>
         /// Get Blocked ips from firewall
