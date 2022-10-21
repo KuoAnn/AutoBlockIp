@@ -74,11 +74,11 @@ namespace AutoBlockIP
 
         private static void Write2EventLog(string message, EventLogEntryType entryType = EventLogEntryType.Information)
         {
-            var assemblyVersion = Assembly.GetEntryAssembly().GetName().Version;
+            var assemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
 
             using (var eventLog = new EventLog("Application"))
             {
-                eventLog.Source = "Application";
+                eventLog.Source = "WebApp";
                 eventLog.WriteEntry($"[{firewallRuleName}][v{assemblyVersion}] {message}", entryType);
             }
         }
