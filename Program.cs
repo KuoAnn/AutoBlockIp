@@ -111,8 +111,7 @@ namespace AutoBlockIP
                         var targetUserName = d.ReplacementStrings[5];
                         var ip = d.ReplacementStrings[19];
 
-                        if (ValidateIPv4(ip) &&
-                            (!IsWhiteList(targetUserName) || IsBlackList(targetUserName)))
+                        if (ValidateIPv4(ip) && (!IsWhiteList(targetUserName)))
                         {
                             if (ips.ContainsKey(ip))
                             {
@@ -126,7 +125,8 @@ namespace AutoBlockIP
                     }
                 }
 
-                suspiciousIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
+                suspiciousIps = ips.Where(x => IsBlackList(x.Key) || x.Value > threshold)
+                    .Select(x => x.Key).ToList();
 
                 Log($"{string.Join(",", suspiciousIps)}");
             }
