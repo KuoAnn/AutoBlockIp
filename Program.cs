@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
+using System.Reflection;
 using System.Text;
 
 namespace AutoBlockIP
@@ -73,10 +74,12 @@ namespace AutoBlockIP
 
         private static void Write2EventLog(string message, EventLogEntryType entryType = EventLogEntryType.Information)
         {
-            using (EventLog eventLog = new EventLog("Application"))
+            var assemblyVersion = Assembly.GetEntryAssembly().GetName().Version;
+
+            using (var eventLog = new EventLog("Application"))
             {
                 eventLog.Source = "Application";
-                eventLog.WriteEntry($"[{firewallRuleName}] {message}", entryType);
+                eventLog.WriteEntry($"[{firewallRuleName}][v{assemblyVersion}] {message}", entryType);
             }
         }
 
