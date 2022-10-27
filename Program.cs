@@ -18,19 +18,19 @@ namespace AutoBlockIP
         {
             try
             {
-                var suspiciousIps = GetSuspiciousIps();
+                var ips = GetSuspiciousIps();
 
-                if (suspiciousIps.Count() > 0)
+                if (ips.Count() > 0)
                 {
                     var blockedIps = GetBlockedIps();
-                    var mergedIps = blockedIps.Union(suspiciousIps);
+                    var mergedIps = blockedIps.Union(ips);
 
                     var newBlockIps = mergedIps.Except(blockedIps);
                     mergedIps = mergedIps.OrderBy(x => x).ToList();
 
                     if (newBlockIps.Count() > 0)
                     {
-                        Log($"NewBlockIps = {string.Join("\n", newBlockIps)}");
+                        Log($" >>> Add [{string.Join("\n", newBlockIps)}]");
                         if (SetBlockedIpsIntoFirewall(mergedIps.ToArray()))
                         {
                             Log("SetBlockedIpsIntoFirewall...OK");
@@ -42,7 +42,7 @@ namespace AutoBlockIP
                     }
                     else
                     {
-                        Log($"\nNo Updated IP...{suspiciousIps.Count() / blockedIps.Count()}");
+                        Log($"\nNo Updated IP...{ips.Count() / blockedIps.Count()}");
                     }
                 }
                 else
@@ -86,17 +86,15 @@ namespace AutoBlockIP
         /// <summary>
         /// Get suspicious ips from event log
         /// </summary>
-        /// <returns></returns>
         private static List<string> GetSuspiciousIps()
         {
-            Log("\nGet Suspicious Ip >>>");
             var suspiciousIps = new List<string>();
             var eventLog = new EventLog() { Log = "Security" };
             var entries =
                 from EventLogEntry e in eventLog.Entries
                 where e.InstanceId == 4625
                     && e.EntryType == EventLogEntryType.FailureAudit
-                    && e.TimeGenerated > DateTime.Now.AddMinutes(-30)
+                    && e.TimeGenerated > DateTime.Now.AddMinutes(-15)
                 select new
                 {
                     e.ReplacementStrings,
@@ -131,11 +129,11 @@ namespace AutoBlockIP
                 suspiciousIps = ips.Where(x => IsBlackList(x.Key) || x.Value > threshold)
                     .Select(x => x.Key).ToList();
 
-                Log($"{string.Join(",", suspiciousIps)}");
+                Log($"[{string.Join(",", suspiciousIps)}]");
             }
             else
             {
-                Log($"No datas in event log \"{eventLog.LogDisplayName}\"");
+                Log($"Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
             }
 
             return suspiciousIps;
@@ -170,10 +168,8 @@ namespace AutoBlockIP
         /// <summary>
         /// Get Blocked ips from firewall
         /// </summary>
-        /// <returns></returns>
         private static List<string> GetBlockedIps()
         {
-            Log("\nGet Blocked Ip >>>");
             var blockedIps = new List<string>();
 
             using (var ps = PowerShell.Create())
@@ -184,7 +180,6 @@ namespace AutoBlockIP
 
                 foreach (string ip in ps.Invoke<string>())
                 {
-                    Log(ip);
                     blockedIps.Add(ip);
                 }
 
@@ -204,10 +199,8 @@ namespace AutoBlockIP
         /// <summary>
         /// Set Blocked ips into firewall
         /// </summary>
-        /// <returns></returns>
         private static bool SetBlockedIpsIntoFirewall(string[] ips)
         {
-            Log($"\nSet {ips.Length} Blocked IP into Firewall >>>");
             using (var ps = PowerShell.Create())
             {
                 var sb = new StringBuilder();
@@ -233,7 +226,7 @@ namespace AutoBlockIP
                 }
                 else
                 {
-                    Program.Log($"{string.Join("\n", ips)}");
+                    Log($"{string.Join("\n", ips)}");
                 }
             }
             return true;
