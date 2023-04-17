@@ -25,7 +25,7 @@ namespace AutoBlockIP
 					outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
 				.WriteTo.Seq("http://localhost:1315",
 					restrictedToMinimumLevel: LogEventLevel.Information,
-					bufferBaseFilename: @"C:\Logs\Seq")
+					bufferBaseFilename: @"Logs\Seq-BlockIp")
 				.CreateLogger();
 
 			try
@@ -69,6 +69,7 @@ namespace AutoBlockIP
 			finally
 			{
 				Log.Warning("[AutoBlockIP] Done\n" + logMessage.ToString());
+				Log.CloseAndFlush();
 #if DEBUG
 				Console.ReadKey();
 #endif
