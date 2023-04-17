@@ -4,6 +4,7 @@ using System.Reflection;
 using System.Text;
 using Serilog.Events;
 using Serilog;
+using System.Linq;
 
 namespace AutoBlockIP
 {
@@ -14,6 +15,7 @@ namespace AutoBlockIP
 		private static readonly string[] blackList = new string[] { "administrator", "guest" };
 		private static readonly string firewallRuleName = "AutoBlockIP";
 		private static StringBuilder logMessage = new StringBuilder();
+		private static readonly int trackMinutes = 10000;
 
 		private static void Main(string[] args)
 		{
@@ -28,6 +30,7 @@ namespace AutoBlockIP
 
 			try
 			{
+				Log.Warning("[AutoBlockIP] START");
 				var ips = GetSuspiciousIps();
 				if (ips.Count() > 0)
 				{
@@ -39,46 +42,37 @@ namespace AutoBlockIP
 
 					if (newBlockIps.Count() > 0)
 					{
-						AppendLog($" >> Add [{string.Join("\n", newBlockIps)}]");
+						Log.Warning($"[AutoBlockIP] Find New Block IP [{string.Join("\n", newBlockIps)}]");
 						if (SetFirewall(unionBlockIps.ToArray()))
 						{
-							Log.Information($"SetFirewall...OK ({unionBlockIps.Count()})");
+							Log.Information($"[AutoBlockIP] SetFirewall...OK ({unionBlockIps.Count()})\n>> {string.Join(',', unionBlockIps)}");
 						}
 						else
 						{
-							Log.Error($"SetFirewall...Fail ({unionBlockIps.Count()})");
+							Log.Error($"[AutoBlockIP] SetFirewall...Fail ({unionBlockIps.Count()})");
 						}
+					}
+					else
+					{
+						Log.Debug("[AutoBlockIP] No New Block IP");
 					}
 				}
 				else
 				{
-					AppendLog($"\nUnextract IP");
+					logMessage.AppendLine($"\nUnextract IP");
 				}
 			}
 			catch (Exception ex)
 			{
-				AppendLog("\nError >> " + ex.ToString());
 				Log.Fatal($"[AutoBlockIP] Excep: {ex.Message}", ex);
 			}
 			finally
 			{
-				if (!string.IsNullOrEmpty(logMessage.ToString().Trim()))
-				{
-					Log.Warning(logMessage.ToString());
-				}
-				else
-				{
-					Log.Debug("[AutoBlockIP] Done");
-				}
+				Log.Warning("[AutoBlockIP] Done\n" + logMessage.ToString());
 #if DEBUG
 				Console.ReadKey();
 #endif
 			}
-		}
-
-		private static void AppendLog(string msg)
-		{
-			logMessage.AppendLine(msg);
 		}
 
 		/// <summary>
@@ -92,7 +86,7 @@ namespace AutoBlockIP
 				from EventLogEntry e in eventLog.Entries
 				where e.InstanceId == 4625
 					&& e.EntryType == EventLogEntryType.FailureAudit
-					&& e.TimeGenerated > DateTime.Now.AddMinutes(-10)
+					&& e.TimeGenerated > DateTime.Now.AddMinutes(-trackMinutes)
 				select new
 				{
 					e.ReplacementStrings,
@@ -127,11 +121,11 @@ namespace AutoBlockIP
 				suspiciousIps = ips.Where(x => IsBlackList(x.Key) || x.Value > threshold)
 					.Select(x => x.Key).ToList();
 
-				AppendLog($"[{string.Join(",", suspiciousIps)}]");
+				Log.Warning($"[AutoBlockIP] Find suspicious IP ({suspiciousIps.Count()}): {string.Join("\n", suspiciousIps)}");
 			}
 			else
 			{
-				AppendLog($"Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
+				Log.Warning($"[AutoBlockIP] Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
 			}
 
 			return suspiciousIps;
