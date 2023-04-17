@@ -15,7 +15,7 @@ namespace AutoBlockIP
 		private static readonly string[] blackList = new string[] { "administrator", "guest" };
 		private static readonly string firewallRuleName = "AutoBlockIP";
 		private static StringBuilder logMessage = new StringBuilder();
-		private static readonly int trackMinutes = 10000;
+		private static readonly int trackMinutes = 10;
 
 		private static void Main(string[] args)
 		{
