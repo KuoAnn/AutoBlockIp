@@ -12,7 +12,7 @@ This Batch Will Auto block suspicious IP from windows event log.
 2. Configure the firewall through the power shell
 3. Log windows event
 
-### Event log datas - 4625
+### Event-4625 log datas
 ``` xml
   <Data Name="SubjectUserSid">S-1-0-0</Data> 
   <Data Name="SubjectUserName">-</Data> 
@@ -79,6 +79,11 @@ if ($all_ips.Contains($ip)){
 
 #Remove-IpAddressToFirewallRule -RuleName "Hacer" -Ip "161.162.163.164"
 ```
+
+## Memo
+
+Can't Publish wtih Single File or you will get error below:
+> The type initializer for 'System.Management.Automation.ExperimentalFeature' threw an exception.
 
 ## Ref
 > https://dotblogs.com.tw/jamesfu/2022/09/13/PowerShell_Block_IP_Address

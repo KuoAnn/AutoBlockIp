@@ -28,9 +28,11 @@ namespace AutoBlockIP
 					bufferBaseFilename: @"Logs\Seq-BlockIp")
 				.CreateLogger();
 
+			var assemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
+
 			try
 			{
-				Log.Warning("[AutoBlockIP] START");
+				Log.Warning("[AutoBlockIP][{assemblyVersion}] START");
 				var ips = GetSuspiciousIps();
 				if (ips.Count() > 0)
 				{
@@ -59,7 +61,7 @@ namespace AutoBlockIP
 				}
 				else
 				{
-					logMessage.AppendLine($"\nUnextract IP");
+					Log.Warning($"\nUnextract IP");
 				}
 			}
 			catch (Exception ex)
@@ -68,7 +70,7 @@ namespace AutoBlockIP
 			}
 			finally
 			{
-				Log.Warning("[AutoBlockIP] Done\n" + logMessage.ToString());
+				Log.Warning("[AutoBlockIP][{assemblyVersion}] END", assemblyVersion);
 				Log.CloseAndFlush();
 #if DEBUG
 				Console.ReadKey();

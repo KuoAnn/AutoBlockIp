@@ -2,10 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0-windows10.0.17763.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
     <SatelliteResourceLanguages>en;zh-TW</SatelliteResourceLanguages>
     <VersionSuffix>1.$([System.DateTime]::Now.ToString(yy)).$([System.DateTime]::Now.ToString(MMdd)).$([System.DateTime]::Now.ToString(HHmm))</VersionSuffix>
     <AssemblyVersion Condition=" '$(VersionSuffix)' == '' ">9.9.9.9</AssemblyVersion>
