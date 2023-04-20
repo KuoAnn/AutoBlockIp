@@ -32,7 +32,7 @@ namespace AutoBlockIP
 
 			try
 			{
-				Log.Warning("[AutoBlockIP][{assemblyVersion}] START");
+				Log.Warning("[AutoBlockIP][{assemblyVersion}] START", assemblyVersion);
 				var ips = GetSuspiciousIps();
 				if (ips.Count() > 0)
 				{
@@ -107,7 +107,7 @@ namespace AutoBlockIP
 						var targetUserName = d.ReplacementStrings[5];
 						var ip = d.ReplacementStrings[19];
 
-						if (ValidateIPv4(ip) && (!IsWhiteList(targetUserName)))
+						if (ValidateIPv4(ip) && !IsWhiteList(targetUserName))
 						{
 							if (ips.ContainsKey(ip))
 							{
