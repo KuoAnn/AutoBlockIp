@@ -12,7 +12,7 @@ namespace AutoBlockIP
 	{
 		private static readonly int threshold = 3;
 		private static readonly string[] whiteList = new string[] { "kuoann" };
-		private static readonly string[] blackList = new string[] { "administrator", "guest" };
+		private static readonly string[] blackList = new string[] { "administrator", "admin", "guest" };
 		private static readonly string firewallRuleName = "AutoBlockIP";
 		private static StringBuilder logMessage = new StringBuilder();
 		private static readonly int trackMinutes = 10;
@@ -124,7 +124,7 @@ namespace AutoBlockIP
 				suspiciousIps = ips.Where(x => IsBlackList(x.Key) || x.Value > threshold)
 					.Select(x => x.Key).ToList();
 
-				Log.Warning($"[AutoBlockIP] Find suspicious IP ({suspiciousIps.Count()}): {string.Join("\n", suspiciousIps)}");
+				Log.Warning($"[AutoBlockIP] Find suspicious IP {suspiciousIps.Count()}/{ips.Count}: {string.Join("\n", suspiciousIps)}");
 			}
 			else
 			{
