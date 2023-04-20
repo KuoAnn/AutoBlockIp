@@ -2,9 +2,8 @@
 using System.Management.Automation;
 using System.Reflection;
 using System.Text;
-using Serilog.Events;
 using Serilog;
-using System.Linq;
+using Serilog.Events;
 
 namespace AutoBlockIP
 {
@@ -14,35 +13,27 @@ namespace AutoBlockIP
 		private static readonly string[] whiteList = new string[] { "kuoann" };
 		private static readonly string[] blackList = new string[] { "administrator", "admin", "guest" };
 		private static readonly string firewallRuleName = "AutoBlockIP";
-		private static StringBuilder logMessage = new StringBuilder();
+
 		private static readonly int trackMinutes = 10;
 
 		private static void Main(string[] args)
 		{
 			Log.Logger = new LoggerConfiguration()
 				.MinimumLevel.Debug()
-				.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug,
-					outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
-				.WriteTo.Seq("http://localhost:1315",
-					restrictedToMinimumLevel: LogEventLevel.Information,
-					bufferBaseFilename: @"Logs\Seq-BlockIp")
+				.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug, outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
+				.WriteTo.Seq("http://localhost:1315", restrictedToMinimumLevel: LogEventLevel.Information, bufferBaseFilename: @"Logs\Seq-BlockIp")
 				.CreateLogger();
-
 			var assemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
-
 			try
 			{
 				Log.Warning("[AutoBlockIP][{assemblyVersion}] START", assemblyVersion);
 				var ips = GetSuspiciousIps();
-				if (ips.Count() > 0)
+				if (ips.Any())
 				{
 					var blockedIps = GetBlockedIps();
-					var unionBlockIps = blockedIps.Union(ips);
-
+					var unionBlockIps = blockedIps.Union(ips).OrderBy(x => x).ToList();
 					var newBlockIps = unionBlockIps.Except(blockedIps);
-					unionBlockIps = unionBlockIps.OrderBy(x => x).ToList();
-
-					if (newBlockIps.Count() > 0)
+					if (newBlockIps.Any())
 					{
 						Log.Warning($"[AutoBlockIP] Find New Block IP [{string.Join("\n", newBlockIps)}]");
 						if (SetFirewall(unionBlockIps.ToArray()))
