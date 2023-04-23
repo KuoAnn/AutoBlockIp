@@ -96,24 +96,25 @@ namespace AutoBlockIP
                     if (d.ReplacementStrings.Length >= 19)
                     {
                         var targetUserName = d.ReplacementStrings[5];
-                        var ip = d.ReplacementStrings[19];
+                        var attackIp = d.ReplacementStrings[19];
 
-                        if (ValidateIPv4(ip))
+                        if (ValidateIPv4(attackIp))
                         {
                             if (IsWhiteList(targetUserName)) continue;
 
-                            if (ips.ContainsKey(ip))
+                            if (ips.ContainsKey(attackIp))
                             {
-                                ips[ip]++;
+                                ips[attackIp]++;
                             }
                             else if (IsBlackList(targetUserName))
                             {
                                 // BlackList is evil! -> Force to over threshold
-                                ips.Add(ip, 666);
+                                Log.Warning($"[AutoBlockIP] [{targetUserName}]({attackIp}) is in BlackList");
+                                ips.Add(attackIp, 666);
                             }
                             else
                             {
-                                ips.Add(ip, 1);
+                                ips.Add(attackIp, 1);
                             }
                         }
                     }
