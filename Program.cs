@@ -35,7 +35,7 @@ namespace AutoBlockIP
                     var newBlockIps = unionBlockIps.Except(blockedIps);
                     if (newBlockIps.Any())
                     {
-                        Log.Warning($"[AutoBlockIP] Find New Block IP [{string.Join("\n", newBlockIps)}]");
+                        Log.Warning("[AutoBlockIP] Find New Block IP [{newBlockIps}]", string.Join("\n", newBlockIps));
                         if (SetFirewall(unionBlockIps.ToArray()))
                         {
                             Log.Information($"[AutoBlockIP] SetFirewall...OK ({unionBlockIps.Count()})\n>> {string.Join(',', unionBlockIps)}");
@@ -109,7 +109,7 @@ namespace AutoBlockIP
                             else if (IsBlackList(targetUserName))
                             {
                                 // BlackList is evil! -> Force to over threshold
-                                Log.Warning($"[AutoBlockIP] [{targetUserName}]({attackIp}) is in BlackList");
+                                Log.Warning("[AutoBlockIP] [{targetUserName}]({attackIp}) is in BlackList", targetUserName, attackIp);
                                 ips.Add(attackIp, 666);
                             }
                             else
@@ -122,7 +122,7 @@ namespace AutoBlockIP
 
                 attackIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
 
-                Log.Warning($"[AutoBlockIP] Find attackIPs {attackIps.Count()}/{ips.Count}: [{string.Join(",", attackIps)}]/[{string.Join(",", ips)}]");
+                Log.Warning("[AutoBlockIP] Find attackIPs {attackIpCount}/{ipCount}: [{attackIps}]", attackIps.Count(), ips.Count, string.Join(",", attackIps));
             }
             else
             {
