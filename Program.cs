@@ -3,6 +3,7 @@ using System.Management.Automation;
 using System.Reflection;
 using System.Text;
 using Serilog;
+using AutoBlockIP;
 using Serilog.Events;
 
 namespace AutoBlockIP
@@ -18,16 +19,18 @@ namespace AutoBlockIP
 
         private static void Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
+            Serilog.Log.Logger = new Serilog.LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug, outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
                 .WriteTo.Seq("http://localhost:1315", restrictedToMinimumLevel: LogEventLevel.Information, bufferBaseFilename: @"Logs\Seq-BlockIp")
                 .CreateLogger();
-            var assemblyVersion = Assembly.GetEntryAssembly()?.GetName().Version;
+
             try
             {
-                Log.Warning("[AutoBlockIP][{assemblyVersion}] START", assemblyVersion);
+                Log.SetPrefix("");
+                Log.Warning("Start 🟢");
                 var ips = GetAttackIps();
+
                 if (ips.Any())
                 {
                     var blockedIps = GetBlockedIps();
@@ -35,19 +38,19 @@ namespace AutoBlockIP
                     var newBlockIps = unionBlockIps.Except(blockedIps);
                     if (newBlockIps.Any())
                     {
-                        Log.Warning("[AutoBlockIP] Find New Block IP [{newBlockIps}]", string.Join("\n", newBlockIps));
+                        Log.Warning("Find New Block IP [{newBlockIps}]", string.Join("\n", newBlockIps));
                         if (SetFirewall(unionBlockIps.ToArray()))
                         {
-                            Log.Information($"[AutoBlockIP] SetFirewall...OK ({unionBlockIps.Count()})\n>> {string.Join(',', unionBlockIps)}");
+                            Log.Information($"SetFirewall...OK ({unionBlockIps.Count()})\n>> {string.Join(',', unionBlockIps)}");
                         }
                         else
                         {
-                            Log.Error($"[AutoBlockIP] SetFirewall...Fail ({unionBlockIps.Count()})");
+                            Log.Error($"SetFirewall...Fail ({unionBlockIps.Count()})");
                         }
                     }
                     else
                     {
-                        Log.Debug("[AutoBlockIP] No New Block IP");
+                        Log.Debug("No New Block IP");
                     }
                 }
                 else
@@ -57,12 +60,12 @@ namespace AutoBlockIP
             }
             catch (Exception ex)
             {
-                Log.Fatal($"[AutoBlockIP] Excep: {ex.Message}", ex);
+                Log.Fatal($"Excep: {ex.Message}", ex);
             }
             finally
             {
-                Log.Warning("[AutoBlockIP][{assemblyVersion}] END", assemblyVersion);
-                Log.CloseAndFlush();
+                Log.Warning("Stop 🔴");
+                Serilog.Log.CloseAndFlush();
 #if DEBUG
                 Console.ReadKey();
 #endif
@@ -109,7 +112,7 @@ namespace AutoBlockIP
                             else if (IsBlackList(targetUserName))
                             {
                                 // BlackList is evil! -> Force to over threshold
-                                Log.Warning("[AutoBlockIP] [{targetUserName}]({attackIp}) is in BlackList", targetUserName, attackIp);
+                                Log.Warning("[{targetUserName}]({attackIp}) is in BlackList", targetUserName, attackIp);
                                 ips.Add(attackIp, 666);
                             }
                             else
@@ -122,11 +125,11 @@ namespace AutoBlockIP
 
                 attackIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
 
-                Log.Warning("[AutoBlockIP] Find attackIPs {attackIpCount}/{ipCount}: [{attackIps}]", attackIps.Count(), ips.Count, string.Join(",", attackIps));
+                Log.Warning("Find attackIPs {attackIpCount}/{ipCount}: [{attackIps}]", attackIps.Count(), ips.Count, string.Join(",", attackIps));
             }
             else
             {
-                Log.Warning($"[AutoBlockIP] Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
+                Log.Warning($"Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
             }
 
             return attackIps;
@@ -181,7 +184,7 @@ namespace AutoBlockIP
                 {
                     foreach (ErrorRecord err in errors)
                     {
-                        Log.Error($"[AutoBlockIP] Error: {err}");
+                        Log.Error($"Error: {err}");
                     }
                 }
             }
@@ -212,7 +215,7 @@ namespace AutoBlockIP
                 {
                     foreach (ErrorRecord err in errors)
                     {
-                        Log.Error($"[AutoBlockIP] Error: {err}");
+                        Log.Error($"Error: {err}");
                     }
 
                     return false;
