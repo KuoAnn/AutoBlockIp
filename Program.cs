@@ -1,9 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
-using System.Reflection;
-using System.Text;
 using Serilog;
-using AutoBlockIP;
 using Serilog.Events;
 
 namespace AutoBlockIP
@@ -19,48 +16,50 @@ namespace AutoBlockIP
 
         private static void Main(string[] args)
         {
-            Serilog.Log.Logger = new Serilog.LoggerConfiguration()
+            Serilog.Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Debug, outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
+                .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
                 .WriteTo.Seq("http://localhost:1315", restrictedToMinimumLevel: LogEventLevel.Information, bufferBaseFilename: @"Logs\Seq-BlockIp")
                 .CreateLogger();
 
             try
             {
-                Log.SetPrefix("");
+                Log.SetPrefix("[BlockIP] ");
                 Log.Warning("Start 🟢");
-                var ips = GetAttackIps();
 
-                if (ips.Any())
+                var blockIps = GetBlockIps();
+                if (blockIps.Count > 0)
                 {
                     var blockedIps = GetBlockedIps();
-                    var unionBlockIps = blockedIps.Union(ips).OrderBy(x => x).ToList();
-                    var newBlockIps = unionBlockIps.Except(blockedIps);
-                    if (newBlockIps.Any())
+                    var finalBlockIps = new HashSet<string>(blockedIps);
+                    finalBlockIps.UnionWith(blockIps);
+                    var newBlockIps = finalBlockIps.Except(blockedIps).ToList();
+
+                    if (newBlockIps.Count > 0)
                     {
-                        Log.Warning("Find New Block IP [{newBlockIps}]", string.Join("\n", newBlockIps));
-                        if (SetFirewall(unionBlockIps.ToArray()))
+                        Log.Warning("Block {newBlockIps}", string.Join("\n", newBlockIps));
+                        if (SetFirewall(finalBlockIps.ToArray()))
                         {
-                            Log.Information($"SetFirewall...OK ({unionBlockIps.Count()})\n>> {string.Join(',', unionBlockIps)}");
+                            Log.Information($"SetFirewall...OK ({finalBlockIps.Count})\n>> {string.Join(',', finalBlockIps)}");
                         }
                         else
                         {
-                            Log.Error($"SetFirewall...Fail ({unionBlockIps.Count()})");
+                            Log.Error($"SetFirewall...Fail ({finalBlockIps.Count})");
                         }
                     }
                     else
                     {
-                        Log.Debug("No New Block IP");
+                        Log.Information("No New BlockIP");
                     }
                 }
                 else
                 {
-                    Log.Warning($"\nUnextract IP");
+                    Log.Information("Can't Get BlockIP");
                 }
             }
             catch (Exception ex)
             {
-                Log.Fatal($"Excep: {ex.Message}", ex);
+                Log.Fatal(ex, ex.Message);
             }
             finally
             {
@@ -75,44 +74,37 @@ namespace AutoBlockIP
         /// <summary>
         /// Get suspicious ips from event log
         /// </summary>
-        private static List<string> GetAttackIps()
+        private static List<string> GetBlockIps()
         {
             var attackIps = new List<string>();
-            var eventLog = new EventLog() { Log = "Security" };
-            var entries =
-                from EventLogEntry e in eventLog.Entries
-                where e.InstanceId == 4625
-                    && e.EntryType == EventLogEntryType.FailureAudit
-                    && e.TimeGenerated > DateTime.Now.AddMinutes(-trackMinutes)
-                select new
-                {
-                    e.ReplacementStrings,
-                };
+            var eventLog = new EventLog("Security");
+            var ips = new Dictionary<string, int>();
 
-            if (entries.Count() > 0)
+            foreach (EventLogEntry e in eventLog.Entries)
             {
-                var events = entries.ToList();
-                var ips = new Dictionary<string, int>();
-
-                foreach (var d in events)
+                if (e.InstanceId == 4625 && e.EntryType == EventLogEntryType.FailureAudit && e.TimeGenerated > DateTime.Now.AddMinutes(-trackMinutes))
                 {
-                    if (d.ReplacementStrings.Length >= 19)
+                    if (e.ReplacementStrings.Length >= 19)
                     {
-                        var targetUserName = d.ReplacementStrings[5];
-                        var attackIp = d.ReplacementStrings[19];
+                        var targetUserName = e.ReplacementStrings[5];
+                        var attackIp = e.ReplacementStrings[19];
 
                         if (ValidateIPv4(attackIp))
                         {
-                            if (IsWhiteList(targetUserName)) continue;
+                            if (IsWhiteList(targetUserName))
+                            {
+                                continue;
+                            }
 
+                            // 更新 IP 攻擊次數
                             if (ips.ContainsKey(attackIp))
                             {
                                 ips[attackIp]++;
                             }
                             else if (IsBlackList(targetUserName))
                             {
-                                // BlackList is evil! -> Force to over threshold
-                                Log.Warning("[{targetUserName}]({attackIp}) is in BlackList", targetUserName, attackIp);
+                                // 黑名單 -> 無視閾值
+                                Log.Warning("Force Block {attackIp} [{targetUserName}]", attackIp, targetUserName);
                                 ips.Add(attackIp, 666);
                             }
                             else
@@ -122,17 +114,10 @@ namespace AutoBlockIP
                         }
                     }
                 }
-
-                attackIps = ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
-
-                Log.Warning("Find attackIPs {attackIpCount}/{ipCount}: [{attackIps}]", attackIps.Count(), ips.Count, string.Join(",", attackIps));
-            }
-            else
-            {
-                Log.Warning($"Event 4625 Not Found in \"{eventLog.LogDisplayName}\"");
             }
 
-            return attackIps;
+            // 過濾超過閾值的攻擊 IP
+            return ips.Where(x => x.Value > threshold).Select(x => x.Key).ToList();
         }
 
         private static bool ValidateIPv4(string ipString)
@@ -153,13 +138,12 @@ namespace AutoBlockIP
             return splitValues.All(r => byte.TryParse(r, out tempForParsing));
         }
 
-        private static bool IsWhiteList(string targetUserName) =>
-            !string.IsNullOrWhiteSpace(targetUserName)
-            && whiteList.Contains(targetUserName.Trim().ToLower());
+        private static bool IsWhiteList(string userName) =>
+            !string.IsNullOrWhiteSpace(userName) && whiteList.Contains(userName.Trim().ToLower());
 
-        private static bool IsBlackList(string targetUserName) =>
-            !string.IsNullOrWhiteSpace(targetUserName)
-            && blackList.Contains(targetUserName.Trim().ToLower());
+        private static bool IsBlackList(string userName) =>
+            string.IsNullOrWhiteSpace(userName) ||
+            (!string.IsNullOrWhiteSpace(userName) && blackList.Contains(userName.Trim().ToLower()));
 
         /// <summary>
         /// Get Blocked ips from firewall
@@ -170,22 +154,22 @@ namespace AutoBlockIP
 
             using (var ps = PowerShell.Create())
             {
-                ps.AddScript("Set-ExecutionPolicy RemoteSigned");
+                // 將 Set-ExecutionPolicy 的範圍設置為 Process 並強制執行，避免影響全域設定。
+                ps.AddScript("Set-ExecutionPolicy RemoteSigned -Scope Process -Force");
                 ps.AddScript("Import-Module NetSecurity");
                 ps.AddScript($"[string[]](Get-NetFirewallRule -DisplayName '{firewallRuleName}' | Get-NetFirewallAddressFilter).RemoteAddress");
 
-                foreach (string ip in ps.Invoke<string>())
+                var results = ps.Invoke<string>();
+                if (ps.HadErrors)
                 {
-                    blockedIps.Add(ip);
-                }
-
-                PSDataCollection<ErrorRecord> errors = ps.Streams.Error;
-                if (errors != null && errors.Count > 0)
-                {
-                    foreach (ErrorRecord err in errors)
+                    foreach (var error in ps.Streams.Error)
                     {
-                        Log.Error($"Error: {err}");
+                        Log.Error($"Error: {error}");
                     }
+                }
+                else
+                {
+                    blockedIps.AddRange(results);
                 }
             }
 
@@ -199,25 +183,22 @@ namespace AutoBlockIP
         {
             using (var ps = PowerShell.Create())
             {
-                var sb = new StringBuilder();
-                sb.Append("\"");
-                sb.Append(string.Join("\",\"", blockIps));
-                sb.Append("\"");
+                var remoteAddresses = string.Join(",", blockIps.Select(ip => $"\"{ip}\""));
+                var script = $@"
+                    Set-ExecutionPolicy RemoteSigned -Scope Process -Force;
+                    Import-Module NetSecurity;
+                    Set-NetFirewallRule -DisplayName '{firewallRuleName}' -Direction Inbound -Action Block -RemoteAddress @({remoteAddresses})
+                ";
 
-                ps.AddScript("Set-ExecutionPolicy RemoteSigned");
-                ps.AddScript("Import-Module NetSecurity");
-                ps.AddScript($"Set-NetFirewallRule -DisplayName '{firewallRuleName}' -Direction Inbound -Action Block -RemoteAddress @({sb})");
-
+                ps.AddScript(script);
                 ps.Invoke();
 
-                PSDataCollection<ErrorRecord> errors = ps.Streams.Error;
-                if (errors != null && errors.Count > 0)
+                if (ps.HadErrors)
                 {
-                    foreach (ErrorRecord err in errors)
+                    foreach (var error in ps.Streams.Error)
                     {
-                        Log.Error($"Error: {err}");
+                        Log.Error($"Error: {error}");
                     }
-
                     return false;
                 }
             }
