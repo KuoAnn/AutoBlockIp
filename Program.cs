@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Management.Automation;
+using System.Reflection;
+using System.Text;
 using Serilog;
 using Serilog.Events;
 
@@ -11,7 +13,7 @@ namespace AutoBlockIP
         private static readonly string[] whiteList = new string[] { "kuoann" };
         private static readonly string[] blackList = new string[] { "administrator", "admin", "guest" };
         private static readonly string firewallRuleName = "AutoBlockIP";
-
+        private static readonly string appName = Assembly.GetExecutingAssembly().GetName().Name;
         private static readonly int trackMinutes = 10;
 
         private static void Main(string[] args)
@@ -19,7 +21,7 @@ namespace AutoBlockIP
             Serilog.Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .WriteTo.Console(outputTemplate: "{Timestamp:HH:mm:ss} [{Level:u3}]{Message}{NewLine}{Exception}")
-                .WriteTo.Seq("http://localhost:1315", restrictedToMinimumLevel: LogEventLevel.Information, bufferBaseFilename: @"Logs\Seq-BlockIp")
+                .WriteTo.Seq("http://localhost:1315", restrictedToMinimumLevel: LogEventLevel.Information, bufferBaseFilename: @$"Logs\Seq-{appName}")
                 .CreateLogger();
 
             try
@@ -82,7 +84,9 @@ namespace AutoBlockIP
 
             foreach (EventLogEntry e in eventLog.Entries)
             {
-                if (e.InstanceId == 4625 && e.EntryType == EventLogEntryType.FailureAudit && e.TimeGenerated > DateTime.Now.AddMinutes(-trackMinutes))
+                if (e.InstanceId == 4625 &&
+                    e.EntryType == EventLogEntryType.FailureAudit &&
+                    e.TimeGenerated > DateTime.Now.AddMinutes(-trackMinutes))
                 {
                     if (e.ReplacementStrings.Length >= 19)
                     {
@@ -96,15 +100,15 @@ namespace AutoBlockIP
                                 continue;
                             }
 
-                            // 更新 IP 攻擊次數
                             if (ips.ContainsKey(attackIp))
                             {
+                                // 更新 IP 攻擊次數 > 超過 threshold 則視為需封鎖的 IP
                                 ips[attackIp]++;
                             }
                             else if (IsBlackList(targetUserName))
                             {
                                 // 黑名單 -> 無視閾值
-                                Log.Warning("Force Block {attackIp} [{targetUserName}]", attackIp, targetUserName);
+                                Log.Warning("Force Block {attackIp} {targetUserName}", attackIp, targetUserName);
                                 ips.Add(attackIp, 666);
                             }
                             else
@@ -154,11 +158,12 @@ namespace AutoBlockIP
 
             using (var ps = PowerShell.Create())
             {
-                // 將 Set-ExecutionPolicy 的範圍設置為 Process 並強制執行，避免影響全域設定。
-                ps.AddScript("Set-ExecutionPolicy RemoteSigned -Scope Process -Force");
-                ps.AddScript("Import-Module NetSecurity");
-                ps.AddScript($"[string[]](Get-NetFirewallRule -DisplayName '{firewallRuleName}' | Get-NetFirewallAddressFilter).RemoteAddress");
-
+                var script = $@"
+                    Set-ExecutionPolicy RemoteSigned -Scope Process -Force;
+                    Import-Module NetSecurity;
+                    [string[]](Get-NetFirewallRule -DisplayName '{firewallRuleName}' | Get-NetFirewallAddressFilter).RemoteAddress;
+                ";
+                ps.AddScript(script);
                 var results = ps.Invoke<string>();
                 if (ps.HadErrors)
                 {
