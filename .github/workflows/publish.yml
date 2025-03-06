@@ -28,9 +28,9 @@ jobs:
     - name: Publish
       run: dotnet publish --configuration Release --output ./AutoBlockIP
 
-    - name: Get current date
+    - name: Get current date as version
       id: date
-      run: echo "NOW=$(date +'%Y%m%d')" >> $GITHUB_ENV
+      run: echo "VERSION=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
     - name: Compress Assets
       run: Compress-Archive -Path ./AutoBlockIP -DestinationPath AutoBlockIP.zip
@@ -41,8 +41,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: v${{ env.NOW }}.${{ github.run_number }}
-        release_name: Release v${{ env.NOW }}.${{ github.run_number }}
+        tag_name: v$VERSION.${{ github.run_number }}
+        release_name: Release v$VERSION.${{ github.run_number }}
         draft: false
         prerelease: false
 
