@@ -28,6 +28,9 @@ jobs:
     - name: Publish
       run: dotnet publish --configuration Release --output ./bin/Publish
 
+    - name: Compress Assets
+      run: zip -r AutoBlockIP.zip ./bin/Publish
+
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
@@ -45,6 +48,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./bin/Publish
-        asset_name: AutoBlockIP
+        asset_path: ./AutoBlockIP.zip
+        asset_name: AutoBlockIP.zip
         asset_content_type: application/zip
